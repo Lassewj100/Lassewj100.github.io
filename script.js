@@ -1,4 +1,3 @@
-// script.js
 function oppdater() {
     var tid = new Date();
     var hours = tid.getHours().toString().padStart(2, '0');
