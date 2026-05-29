@@ -1,6 +1,8 @@
 # Lassewj100.github.io
-This is 2048 game on a website
+Dette er 2048 spilet på en nettside
 
-Goal of the game: Combine tiles with the same number to double their value. Keep combining until you create a tile with the number 2048.
+Mål for spillet: Kombiner brikker med samme tall for å doble verdien. Fortsett å kombinere til du lager en brikke med tallet 2048.
 
-Download the game on your computer to play it offline
+Last ned spillet på datamaskinen din for å spille det uten nettilgang.
+
+
