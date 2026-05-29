@@ -1,2 +1,2 @@
 # Lassewj100.github.io
-This code shows real time
+This is 2048 game on a website
