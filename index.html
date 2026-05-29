@@ -1,14 +1,500 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <title>Klokketest</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2048</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0e0e10;
+    --surface: #18181c;
+    --border: #2a2a30;
+    --text: #f0ede8;
+    --muted: #666;
+    --accent: #e8b84b;
+    --accent2: #e87b4b;
+
+    --c2:    #1e1e24; --t2:    #888;
+    --c4:    #25252e; --t4:    #aaa;
+    --c8:    #3d2a1a; --t8:    #e8944b;
+    --c16:   #4a2010; --t16:   #f0a060;
+    --c32:   #5a1a10; --t32:   #f07050;
+    --c64:   #6a1010; --t64:   #f05050;
+    --c128:  #1a3a1a; --t128:  #60d060;
+    --c256:  #1a4a2a; --t256:  #50e080;
+    --c512:  #1a3a4a; --t512:  #50b0e0;
+    --c1024: #1a2a5a; --t1024: #6090f0;
+    --c2048: #3a1a5a; --t2048: #c060f0;
+    --chigh: #2a1a3a; --thigh: #e060ff;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    user-select: none;
+  }
+
+  .game-wrap {
+    width: 100%;
+    max-width: 460px;
+  }
+
+  header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+
+  .title {
+    font-family: 'Syne', sans-serif;
+    font-size: 52px;
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1;
+    letter-spacing: -2px;
+  }
+
+  .scores {
+    display: flex;
+    gap: 10px;
+  }
+
+  .score-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 16px;
+    text-align: center;
+    min-width: 80px;
+  }
+
+  .score-box .label {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .score-box .val {
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--text);
+    margin-top: 2px;
+  }
+
+  .controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+    align-items: center;
+  }
+
+  .info {
+    font-size: 12px;
+    color: var(--muted);
+    flex: 1;
+  }
+
+  button {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    padding: 8px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+
+  button:hover {
+    background: #222228;
+    border-color: #444;
+  }
+
+  button.primary {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  button.primary:hover {
+    background: rgba(232, 184, 75, 0.08);
+  }
+
+  .board-wrap {
+    position: relative;
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 12px;
+  }
+
+  .grid-bg {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+
+  .cell-bg {
+    background: var(--bg);
+    border-radius: 8px;
+    aspect-ratio: 1;
+    border: 1px solid #1e1e24;
+  }
+
+  .tiles-layer {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    pointer-events: none;
+  }
+
+  .tile {
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    transition: transform 0.1s ease;
+    animation: pop-in 0.12s ease;
+    position: relative;
+  }
+
+  @keyframes pop-in {
+    0%   { transform: scale(0.5); opacity: 0; }
+    60%  { transform: scale(1.08); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  @keyframes merge-pop {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.18); }
+    100% { transform: scale(1); }
+  }
+
+  .tile.merged { animation: merge-pop 0.18s ease; }
+
+  .tile[data-val="2"]    { background: var(--c2);    color: var(--t2);    font-size: 32px; }
+  .tile[data-val="4"]    { background: var(--c4);    color: var(--t4);    font-size: 32px; }
+  .tile[data-val="8"]    { background: var(--c8);    color: var(--t8);    font-size: 32px; }
+  .tile[data-val="16"]   { background: var(--c16);   color: var(--t16);   font-size: 30px; }
+  .tile[data-val="32"]   { background: var(--c32);   color: var(--t32);   font-size: 30px; }
+  .tile[data-val="64"]   { background: var(--c64);   color: var(--t64);   font-size: 30px; }
+  .tile[data-val="128"]  { background: var(--c128);  color: var(--t128);  font-size: 26px; }
+  .tile[data-val="256"]  { background: var(--c256);  color: var(--t256);  font-size: 26px; }
+  .tile[data-val="512"]  { background: var(--c512);  color: var(--t512);  font-size: 26px; }
+  .tile[data-val="1024"] { background: var(--c1024); color: var(--t1024); font-size: 22px; }
+  .tile[data-val="2048"] { background: var(--c2048); color: var(--t2048); font-size: 22px; }
+
+  .overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(14,14,16,0.88);
+    border-radius: 14px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    z-index: 10;
+  }
+
+  .overlay.show { display: flex; }
+
+  .overlay-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 36px;
+    font-weight: 800;
+  }
+
+  .overlay-title.win  { color: var(--accent); }
+  .overlay-title.lose { color: #e85050; }
+
+  .overlay-sub {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .overlay-btns {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+  }
+
+  .how-to {
+    margin-top: 14px;
+    font-size: 11px;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.8;
+  }
+
+  .how-to span { color: #555; }
+
+  .streak {
+    font-size: 11px;
+    color: var(--muted);
+    text-align: center;
+    margin-bottom: 10px;
+    height: 16px;
+  }
+
+  .streak.show { color: var(--accent); }
+</style>
 </head>
 <body>
-    <div class="container">
-        <p>Klokka er nå: <span id="klokkeutskrift">Kunne ikke vise tidspunkt</span></p>
+
+<div class="game-wrap">
+  <header>
+    <div class="title">2048</div>
+    <div class="scores">
+      <div class="score-box">
+        <div class="label">Score</div>
+        <div class="val" id="score">0</div>
+      </div>
+      <div class="score-box">
+        <div class="label">Best</div>
+        <div class="val" id="best">0</div>
+      </div>
     </div>
-    <script src="script.js"></script>
+  </header>
+
+  <div class="controls">
+    <span class="info">join tiles to reach <strong style="color:var(--accent)">2048</strong></span>
+    <button class="primary" onclick="newGame()">new game</button>
+    <button onclick="undoMove()">undo</button>
+  </div>
+
+  <div class="streak" id="streak"></div>
+
+  <div class="board-wrap" id="board-wrap">
+    <div class="grid-bg" id="grid-bg"></div>
+    <div class="tiles-layer" id="tiles-layer"></div>
+    <div class="overlay" id="overlay">
+      <div class="overlay-title" id="overlay-title"></div>
+      <div class="overlay-sub" id="overlay-sub"></div>
+      <div class="overlay-btns">
+        <button class="primary" onclick="newGame()">play again</button>
+        <button id="overlay-continue" onclick="continueGame()" style="display:none">keep going</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="how-to">
+    <span>keyboard:</span> arrow keys &nbsp;|&nbsp; <span>mobile:</span> swipe
+  </div>
+</div>
+
+<script>
+const SIZE = 4;
+let board, score, best, history, won, continued;
+
+function init() {
+  best = parseInt(localStorage.getItem('2048best') || '0');
+  document.getElementById('best').textContent = best;
+  buildBgGrid();
+  newGame();
+}
+
+function buildBgGrid() {
+  const bg = document.getElementById('grid-bg');
+  bg.innerHTML = '';
+  for (let i = 0; i < SIZE * SIZE; i++) {
+    const c = document.createElement('div');
+    c.className = 'cell-bg';
+    bg.appendChild(c);
+  }
+}
+
+function newGame() {
+  board = Array.from({length: SIZE}, () => Array(SIZE).fill(0));
+  score = 0;
+  won = false;
+  continued = false;
+  history = [];
+  updateScore(0);
+  hideOverlay();
+  addTile(); addTile();
+  render();
+}
+
+function addTile() {
+  const empty = [];
+  for (let r = 0; r < SIZE; r++)
+    for (let c = 0; c < SIZE; c++)
+      if (!board[r][c]) empty.push([r, c]);
+  if (!empty.length) return false;
+  const [r, c] = empty[Math.floor(Math.random() * empty.length)];
+  board[r][c] = Math.random() < 0.9 ? 2 : 4;
+  return true;
+}
+
+function render(mergedCells = []) {
+  const layer = document.getElementById('tiles-layer');
+  layer.innerHTML = '';
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      const v = board[r][c];
+      if (!v) continue;
+      const tile = document.createElement('div');
+      tile.className = 'tile';
+      if (mergedCells.some(m => m[0] === r && m[1] === c)) tile.classList.add('merged');
+      tile.setAttribute('data-val', v > 2048 ? 'high' : v);
+      tile.textContent = v;
+      tile.style.gridRow = r + 1;
+      tile.style.gridColumn = c + 1;
+      layer.appendChild(tile);
+    }
+  }
+}
+
+function saveHistory() {
+  history.push({
+    board: board.map(r => [...r]),
+    score
+  });
+  if (history.length > 5) history.shift();
+}
+
+function undoMove() {
+  if (!history.length) return;
+  const prev = history.pop();
+  board = prev.board;
+  score = prev.score;
+  updateScore(score);
+  render();
+}
+
+function move(dir) {
+  saveHistory();
+  let moved = false;
+  const merged = [];
+
+  const rotations = { left: 0, up: 1, right: 2, down: 3 };
+  const times = rotations[dir];
+  for (let i = 0; i < times; i++) board = rotateRight(board);
+
+  for (let r = 0; r < SIZE; r++) {
+    let row = board[r].filter(v => v);
+    for (let i = 0; i < row.length - 1; i++) {
+      if (row[i] === row[i + 1]) {
+        row[i] *= 2;
+        score += row[i];
+        if (row[i] === 2048 && !won && !continued) {
+          won = true;
+          setTimeout(() => showOverlay('win'), 300);
+        }
+        row.splice(i + 1, 1);
+        moved = true;
+      }
+    }
+    while (row.length < SIZE) row.push(0);
+    if (row.join() !== board[r].join()) moved = true;
+    board[r] = row;
+  }
+
+  for (let i = 0; i < (4 - times) % 4; i++) board = rotateRight(board);
+
+  if (moved) {
+    updateScore(score);
+    addTile();
+    render(merged);
+    if (!canMove()) setTimeout(() => showOverlay('lose'), 300);
+  } else {
+    history.pop();
+  }
+}
+
+function rotateRight(b) {
+  return b[0].map((_, c) => b.map(r => r[c]).reverse());
+}
+
+function canMove() {
+  for (let r = 0; r < SIZE; r++)
+    for (let c = 0; c < SIZE; c++) {
+      if (!board[r][c]) return true;
+      if (c < SIZE-1 && board[r][c] === board[r][c+1]) return true;
+      if (r < SIZE-1 && board[r][c] === board[r+1][c]) return true;
+    }
+  return false;
+}
+
+function updateScore(s) {
+  score = s;
+  document.getElementById('score').textContent = s;
+  if (s > best) {
+    best = s;
+    localStorage.setItem('2048best', best);
+    document.getElementById('best').textContent = best;
+  }
+}
+
+function showOverlay(type) {
+  const overlay = document.getElementById('overlay');
+  const title = document.getElementById('overlay-title');
+  const sub = document.getElementById('overlay-sub');
+  const cont = document.getElementById('overlay-continue');
+  if (type === 'win') {
+    title.textContent = 'you win!';
+    title.className = 'overlay-title win';
+    sub.textContent = 'reached 2048 — keep going or start fresh';
+    cont.style.display = 'inline-block';
+  } else {
+    title.textContent = 'game over';
+    title.className = 'overlay-title lose';
+    sub.textContent = `final score: ${score}`;
+    cont.style.display = 'none';
+  }
+  overlay.classList.add('show');
+}
+
+function hideOverlay() {
+  document.getElementById('overlay').classList.remove('show');
+}
+
+function continueGame() {
+  continued = true;
+  hideOverlay();
+}
+
+document.addEventListener('keydown', e => {
+  const map = { ArrowLeft:'left', ArrowRight:'right', ArrowUp:'up', ArrowDown:'down' };
+  if (map[e.key]) { e.preventDefault(); move(map[e.key]); }
+});
+
+let touchStartX, touchStartY;
+document.addEventListener('touchstart', e => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+document.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  if (Math.abs(dx) < 20 && Math.abs(dy) < 20) return;
+  if (Math.abs(dx) > Math.abs(dy)) move(dx > 0 ? 'right' : 'left');
+  else move(dy > 0 ? 'down' : 'up');
+}, { passive: true });
+
+init();
+</script>
 </body>
 </html>
